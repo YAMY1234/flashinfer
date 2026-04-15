@@ -288,7 +288,7 @@ def chunk_gated_delta_rule(
     _scale = scale if scale is not None else 1.0 / math.sqrt(head_size)
 
     _cuda_major = int(torch.version.cuda.split(".")[0]) if torch.version.cuda else 0
-    if _has_blackwell_prefill and is_sm100a_supported(device) and _cuda_major >= 13:
+    if _has_blackwell_prefill and is_sm100a_supported(device) and _cuda_major >= 12:
         # Blackwell SM100 and SM103 path (CuTe DSL kernel)
         assert head_size == 128, (
             f"Blackwell GDN prefill requires head_size=128, got {head_size}"
