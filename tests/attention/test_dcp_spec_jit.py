@@ -41,9 +41,13 @@ def test_dcp_spec_uri_covers_full_parameterized_domain() -> None:
     assert fp8_uri == (
         "cake_fmha_dcp_spec_bf16_fp8_sm100a_b256_q3_hq64_hkv8_cp4_split3_retain1"
     )
-    assert get_dcp_spec_fp8_d256_uri("sm100f", 8, 4, 16, 1, 4, 4) == (
-        "cake_fmha_dcp_spec_bf16_fp8_d256_sm100f_b8_q4_hq16_hkv1_cp4_split4_retain0"
-    )
+    for q_len in (3, 4, 5, 6):
+        assert get_dcp_spec_fp8_d256_uri(
+            "sm100f", 8, q_len, 16, 1, 4, 4
+        ) == (
+            "cake_fmha_dcp_spec_bf16_fp8_d256_sm100f_"
+            f"b8_q{q_len}_hq16_hkv1_cp4_split4_retain0"
+        )
 
 
 def test_dcp_jit_selects_the_route_specialized_source_family(monkeypatch) -> None:
@@ -138,7 +142,7 @@ def test_fp8_dcp_spec_uri_supports_q3_but_rejects_other_gaps() -> None:
 
 def test_fp8_d256_uri_rejects_nonproduction_shapes() -> None:
     with pytest.raises(ValueError, match="q_len"):
-        get_dcp_spec_fp8_d256_uri("sm100f", 8, 3, 16, 1, 4, 4)
+        get_dcp_spec_fp8_d256_uri("sm100f", 8, 2, 16, 1, 4, 4)
     with pytest.raises(ValueError, match="num_q_heads"):
         get_dcp_spec_fp8_d256_uri("sm100f", 8, 4, 32, 2, 4, 4)
     with pytest.raises(ValueError, match="cp_world"):

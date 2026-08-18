@@ -550,13 +550,14 @@ def test_fp8_page64_b256_public_api_cuda_graph_capture_replay() -> None:
     assert torch.isfinite(lse).all()
 
 
-def test_fp8_page64_d256_ratio16_all_ranks_and_graph_replay() -> None:
+@pytest.mark.parametrize("q_len", (3, 4, 5, 6))
+def test_fp8_page64_d256_ratio16_all_ranks_and_graph_replay(q_len: int) -> None:
     _require_blackwell_dcp()
     torch.manual_seed(17)
-    batch_size, q_len = 1, 4
+    batch_size = 1
     num_q_heads, num_kv_heads, head_dim = 16, 1, 256
     cp_world = 4
-    prefix_len = 32764
+    prefix_len = 32768 - q_len
     global_len = prefix_len + q_len
     sm_scale = head_dim**-0.5
     query = (
