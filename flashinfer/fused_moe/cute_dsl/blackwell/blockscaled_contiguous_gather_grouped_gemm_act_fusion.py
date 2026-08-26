@@ -63,6 +63,7 @@ from .utils import (
     griddepcontrol_launch_dependents,
     griddepcontrol_wait,
     is_power_of_2,
+    silu_f32,
     situ_f32,
     tanh_f32,
 )
@@ -588,6 +589,12 @@ class BlockScaledContiguousGatherGroupedGemmKernel:
         self.swiglu_limit = swiglu_limit
         self.situ_beta = situ_beta
         self.situ_linear_beta = situ_linear_beta
+        self.use_standard_swiglu = (
+            activation_type == ActivationType.Swiglu
+            and swiglu_alpha == DEFAULT_SWIGLU_ALPHA
+            and swiglu_beta == DEFAULT_SWIGLU_BETA
+            and swiglu_limit == DEFAULT_SWIGLU_LIMIT
+        )
 
     def _setup_attributes(self):
         """Set up configurations that are dependent on GEMM inputs
@@ -2802,7 +2809,71 @@ class BlockScaledContiguousGatherGroupedGemmKernel:
                         swiglu_beta = cutlass.Float32(self.swiglu_beta)
                         swiglu_limit = cutlass.Float32(self.swiglu_limit)
                         LOG2_E = cutlass.Float32(1.4426950408889634)
-                        if cutlass.const_expr(self.situ_beta is not None):
+                        if cutlass.const_expr(self.use_standard_swiglu):
+                            if cutlass.const_expr(self.vectorized_f32):
+                                for i in cutlass.range_constexpr(
+                                    0, cute.size(tTR_rAcc_up), 2
+                                ):
+                                    acc_vec_up_alpha = cute.arch.mul_packed_f32x2(
+                                        (acc_vec_up[i], acc_vec_up[i + 1]),
+                                        (
+                                            cutlass.Float32(alpha_val),
+                                            cutlass.Float32(alpha_val),
+                                        ),
+                                    )
+                                    acc_vec_gate_alpha = cute.arch.mul_packed_f32x2(
+                                        (acc_vec_gate[i], acc_vec_gate[i + 1]),
+                                        (
+                                            cutlass.Float32(alpha_val),
+                                            cutlass.Float32(alpha_val),
+                                        ),
+                                    )
+                                    gate_log2e = cute.arch.mul_packed_f32x2(
+                                        acc_vec_gate_alpha, (-LOG2_E, -LOG2_E)
+                                    )
+                                    tCompute[i], tCompute[i + 1] = (
+                                        cute.arch.add_packed_f32x2(
+                                            (
+                                                cute.math.exp2(
+                                                    gate_log2e[0], fastmath=True
+                                                ),
+                                                cute.math.exp2(
+                                                    gate_log2e[1], fastmath=True
+                                                ),
+                                            ),
+                                            (1.0, 1.0),
+                                        )
+                                    )
+                                    tCompute[i] = cute.arch.rcp_approx(tCompute[i])
+                                    tCompute[i + 1] = cute.arch.rcp_approx(
+                                        tCompute[i + 1]
+                                    )
+                                    tCompute[i], tCompute[i + 1] = (
+                                        cute.arch.mul_packed_f32x2(
+                                            (tCompute[i], tCompute[i + 1]),
+                                            acc_vec_gate_alpha,
+                                        )
+                                    )
+                                    tCompute[i], tCompute[i + 1] = (
+                                        cute.arch.mul_packed_f32x2(
+                                            (tCompute[i], tCompute[i + 1]),
+                                            acc_vec_up_alpha,
+                                        )
+                                    )
+                            else:
+                                for i in cutlass.range_constexpr(
+                                    cute.size(tTR_rAcc_up)
+                                ):
+                                    acc_vec_up_alpha = acc_vec_up[i] * cutlass.Float32(
+                                        alpha_val
+                                    )
+                                    acc_vec_gate_alpha = acc_vec_gate[
+                                        i
+                                    ] * cutlass.Float32(alpha_val)
+                                    tCompute[i] = acc_vec_up_alpha * silu_f32(
+                                        acc_vec_gate_alpha, fastmath=True
+                                    )
+                        elif cutlass.const_expr(self.situ_beta is not None):
                             # Keep the Python float so situ_f32 can fold 1/beta.
                             situ_beta = self.situ_beta
                             if cutlass.const_expr(self.situ_linear_beta is not None):
