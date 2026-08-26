@@ -324,6 +324,18 @@ def _is_rubin_tactic(tactic: Tuple) -> bool:
     return len(gemm1_tactic) == 4
 
 
+def _keep_gemm1_tactic_for_shape(
+    num_tokens: int, tile_size: int, gemm1_mma_tiler_mn: Tuple[int, int]
+) -> bool:
+    """Prefer the narrower Blackwell GEMM1 N tile for one decode tile.
+
+    A 128-wide N tile exposes twice as many CTAs as the 256-wide variant.
+    Keep both tactics for larger token batches so autotuning can still select
+    the higher-throughput shape.
+    """
+    return num_tokens > tile_size or gemm1_mma_tiler_mn[1] == 128
+
+
 def _extract_tactic_params(tactic: Tuple) -> Dict[str, Any]:
     """Extract parameters from a MoE tactic tuple.
 
@@ -748,6 +760,11 @@ class CuteDslFusedMoENvfp4Runner(TunableRunner):
 
                 gemm1_mma_tiler_mn, gemm1_cluster_shape_mn, _ = gemm1_tactic
                 gemm2_mma_tiler_mn, gemm2_cluster_shape_mn, _ = gemm2_tactic
+
+                if not _keep_gemm1_tactic_for_shape(
+                    num_tokens, tile_size, gemm1_mma_tiler_mn
+                ):
+                    return False
 
                 gemm1_ok = BlockScaledContiguousGatherGroupedGemmKernel.can_implement(
                     a_dtype=ab_dtype,

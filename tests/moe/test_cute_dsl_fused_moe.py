@@ -438,6 +438,23 @@ class TestTacticEnumeration:
                 elif route_tile == 192:
                     assert mma_m == 256
 
+    @pytest.mark.parametrize("num_tokens", [1, 64, 128])
+    def test_small_decode_keeps_only_narrow_gemm1_tactic(self, num_tokens):
+        from flashinfer.fused_moe.cute_dsl.tuner import (
+            _keep_gemm1_tactic_for_shape,
+        )
+
+        assert _keep_gemm1_tactic_for_shape(num_tokens, 128, (128, 128))
+        assert not _keep_gemm1_tactic_for_shape(num_tokens, 128, (128, 256))
+
+    def test_larger_token_batch_keeps_both_gemm1_tactics(self):
+        from flashinfer.fused_moe.cute_dsl.tuner import (
+            _keep_gemm1_tactic_for_shape,
+        )
+
+        assert _keep_gemm1_tactic_for_shape(129, 128, (128, 128))
+        assert _keep_gemm1_tactic_for_shape(129, 128, (128, 256))
+
 
 # =============================================================================
 # Test Class: CuteDslMoEInputsHelper.inputs_pre_hook layout contract
