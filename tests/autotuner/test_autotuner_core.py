@@ -3290,6 +3290,45 @@ def test_moe_empty_routing_placeholders_preserve_file_cache_key():
     )
 
 
+def test_moe_deferred_finalize_shares_finalized_cache_key():
+    """do_finalize=False resolves to the entry tuned with a finalized output."""
+    num_tokens, hidden_size, num_experts = 17, 64, 8
+
+    def cache_key(output_width, do_finalize, finalized_hidden_size):
+        moe_inputs = MoeRunnerInputs(
+            output=torch.empty((num_tokens, output_width)),
+            routing_logits=torch.empty((num_tokens, num_experts)),
+            topk_ids=torch.empty((0,), dtype=torch.int32),
+            expert_weights=torch.empty((0,), dtype=torch.bfloat16),
+            hidden_states=torch.empty((num_tokens, hidden_size)),
+            hidden_states_scale=None,
+            gemm1_lora_delta=None,
+            per_token_scale=None,
+            do_finalize=do_finalize,
+            finalized_hidden_size=finalized_hidden_size,
+        )
+        tuning_config = make_moe_tuning_config(
+            moe_inputs,
+            num_experts=num_experts,
+            hidden_size=hidden_size,
+            fp8_quantization_type=Fp8QuantizationType.NoneFp8,
+            init_packed_topk_ids=moe_topk_ids_init(num_experts),
+        )
+        input_shapes = AutoTuner.get()._get_input_sizes(moe_inputs.to_list())
+        return AutoTuner._get_cache_key(
+            "test::routed_moe", DummyRunner(), input_shapes, tuning_config
+        )
+
+    finalized = cache_key(hidden_size, True, hidden_size)
+    deferred = cache_key(0, False, hidden_size)
+    assert deferred.nearest_profile == finalized.nearest_profile
+    assert deferred.file_key == finalized.file_key
+    # A caller-provided finalized-shape buffer on a deferred call is unchanged.
+    assert cache_key(hidden_size, False, hidden_size).file_key == finalized.file_key
+    # do_finalize=True keeps keying on the output it is given.
+    assert cache_key(0, True, hidden_size).nearest_profile[0] == (32, 0)
+
+
 def test_find_nearest_profile_cache_ignores_fresh_closure_initializer(monkeypatch):
     """Initializers do not affect profile selection or its cache key."""
     AutoTuner._find_nearest_profile_cached.cache_clear()

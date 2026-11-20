@@ -2512,6 +2512,8 @@ def _build_trtllm_moe_namespace(module):
 
         moe_inputs = MoeRunnerInputs(
             output=output,
+            do_finalize=do_finalize,
+            finalized_hidden_size=hidden_size,
             routing_logits=routing_logits,
             topk_ids=topk_ids,
             expert_weights=expert_weights,
@@ -2794,6 +2796,8 @@ def _build_trtllm_moe_namespace(module):
 
         moe_inputs = MoeRunnerInputs(
             output=output,
+            do_finalize=do_finalize,
+            finalized_hidden_size=hidden_size,
             routing_logits=routing_logits,
             topk_ids=topk_ids,
             expert_weights=topk_weights,
@@ -3043,6 +3047,8 @@ def _build_trtllm_moe_namespace(module):
 
         moe_inputs = MoeRunnerInputs(
             output=output,
+            do_finalize=do_finalize,
+            finalized_hidden_size=hidden_size,
             routing_logits=None,
             topk_ids=topk_ids,
             expert_weights=expert_weights,
@@ -3323,6 +3329,8 @@ def _build_trtllm_moe_namespace(module):
 
         moe_inputs = MoeRunnerInputs(
             output=output,
+            do_finalize=do_finalize,
+            finalized_hidden_size=hidden_size,
             routing_logits=routing_logits,
             topk_ids=topk_ids,
             expert_weights=expert_weights,
@@ -3599,6 +3607,8 @@ def _build_trtllm_moe_namespace(module):
 
         moe_inputs = MoeRunnerInputs(
             output=output,
+            do_finalize=do_finalize,
+            finalized_hidden_size=output_width,
             routing_logits=routing_logits,
             topk_ids=topk_ids,
             expert_weights=expert_weights,
@@ -4019,6 +4029,8 @@ def _build_trtllm_moe_namespace(module):
         )
         moe_inputs = MoeRunnerInputs(
             output=output,
+            do_finalize=do_finalize,
+            finalized_hidden_size=output_width,
             routing_logits=routing_logits,
             topk_ids=topk_ids,
             expert_weights=topk_weights,
@@ -4429,6 +4441,8 @@ def _build_trtllm_moe_namespace(module):
 
         moe_inputs = MoeRunnerInputs(
             output=output,
+            do_finalize=do_finalize,
+            finalized_hidden_size=output_width,
             routing_logits=routing_logits,
             topk_ids=topk_ids,
             expert_weights=expert_weights,

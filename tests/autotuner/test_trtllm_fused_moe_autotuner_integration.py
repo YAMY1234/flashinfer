@@ -609,3 +609,71 @@ def test_bf16_moe_invalid_tactic_raises_runtime_error(monkeypatch, invalid_tacti
             gemm2_weights=gemm2_weights,
             tune_max=TUNE_MAX,
         )
+
+
+def _moe_cache_keys(custom_op: str):
+    return {
+        key for key in AutoTuner.get().profiling_cache if key.custom_op == custom_op
+    }
+
+
+@pytest.mark.parametrize("num_tokens", [8, 64])
+def test_bf16_moe_deferred_finalize_hits_finalized_tuned_entry(num_tokens: int):
+    """do_finalize=False must reuse the entry tuned by a finalized call.
+
+    The op never writes ``output`` when it does not finalize, so its zero-width
+    placeholder must not move the call to an autotune key that has no tuned entry.
+    """
+    from flashinfer.fused_moe import trtllm_bf16_moe, WeightLayout
+
+    _require_sm100()
+    reset_autotuner()
+    device = torch.device("cuda:0")
+    hidden_size, intermediate_size, top_k, num_experts = 1024, 1024, 4, 16
+    gemm1_weights, gemm2_weights = _prepare_bf16_moe_weights(
+        num_experts, intermediate_size, hidden_size, device
+    )
+    routing_logits = torch.rand(
+        num_tokens, num_experts, device=device, dtype=torch.bfloat16
+    )
+    hidden_states = torch.randn(
+        num_tokens, hidden_size, device=device, dtype=torch.bfloat16
+    )
+
+    def run(do_finalize: bool):
+        return trtllm_bf16_moe(
+            routing_logits=routing_logits,
+            routing_bias=None,
+            hidden_states=hidden_states,
+            gemm1_weights=gemm1_weights,
+            gemm2_weights=gemm2_weights,
+            num_experts=num_experts,
+            top_k=top_k,
+            n_group=None,
+            topk_group=None,
+            intermediate_size=intermediate_size,
+            local_expert_offset=0,
+            local_num_experts=num_experts,
+            routed_scaling_factor=None,
+            routing_method_type=RoutingMethodType.Renormalize.value,
+            use_shuffled_weight=True,
+            weight_layout=WeightLayout.BlockMajorK,
+            do_finalize=do_finalize,
+            tune_max_num_tokens=TUNE_MAX,
+        )
+
+    op = "flashinfer::trtllm_bf16_moe"
+    with autotune(tune_mode=True):
+        run(True)
+    tuned_keys = _moe_cache_keys(op)
+    assert tuned_keys
+
+    # A deferred call in tuning mode finds the tuned entry instead of adding one.
+    with autotune(tune_mode=True):
+        run(False)
+    assert _moe_cache_keys(op) == tuned_keys
+
+    # A finalized call is unaffected.
+    with autotune(tune_mode=True):
+        run(True)
+    assert _moe_cache_keys(op) == tuned_keys

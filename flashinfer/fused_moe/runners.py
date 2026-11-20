@@ -6094,6 +6094,8 @@ class TrtllmFp4RoutedRunner(_TrtllmRunnerBase):
 
         moe_inputs = MoeRunnerInputs(
             output=output,
+            do_finalize=self.config.finalize.do_finalize,
+            finalized_hidden_size=hidden_size,
             routing_logits=routing_logits,
             topk_ids=topk_ids,
             expert_weights=expert_weights,
@@ -6474,6 +6476,8 @@ class TrtllmFp8BlockRunner(_TrtllmRunnerBase):
 
         moe_inputs = MoeRunnerInputs(
             output=output,
+            do_finalize=self.config.finalize.do_finalize,
+            finalized_hidden_size=hidden_size,
             routing_logits=routing_logits,
             topk_ids=topk_ids,
             expert_weights=expert_weights,
@@ -6799,6 +6803,8 @@ class TrtllmFp8PerTensorRunner(_TrtllmRunnerBase):
 
         moe_inputs = MoeRunnerInputs(
             output=output,
+            do_finalize=self.config.finalize.do_finalize,
+            finalized_hidden_size=hidden_size,
             routing_logits=routing_logits,
             topk_ids=topk_ids,
             expert_weights=expert_weights,
@@ -7047,6 +7053,8 @@ class TrtllmBf16RoutedRunner(_TrtllmRunnerBase):
         )
         moe_inputs = MoeRunnerInputs(
             output=output,
+            do_finalize=self.config.finalize.do_finalize,
+            finalized_hidden_size=hidden_size,
             routing_logits=routing_logits,
             topk_ids=topk_ids,
             expert_weights=expert_weights,
@@ -8038,6 +8046,8 @@ class PrimsTsRunner(_TrtllmRunnerBase):
             )
         moe_inputs = MoeRunnerInputs(
             output=output,
+            do_finalize=self.config.finalize.do_finalize,
+            finalized_hidden_size=hidden_size,
             routing_logits=routing_logits,
             topk_ids=topk_ids,
             expert_weights=expert_weights,
@@ -8371,6 +8381,8 @@ class TrtllmMxInt4RoutedRunner(_TrtllmRunnerBase):
         )
         moe_inputs = MoeRunnerInputs(
             output=output,
+            do_finalize=self.config.finalize.do_finalize,
+            finalized_hidden_size=hidden_size,
             routing_logits=routing_logits,
             topk_ids=topk_ids,
             expert_weights=expert_weights,

@@ -410,6 +410,8 @@ def _prims_ts_fp8_per_tensor_scale_moe_impl(
     )
     moe_inputs = MoeRunnerInputs(
         output=output,
+        do_finalize=do_finalize,
+        finalized_hidden_size=hidden_size,
         routing_logits=routing_logits,
         topk_ids=topk_ids,
         expert_weights=expert_weights,
@@ -1374,6 +1376,8 @@ def _prims_ts_fp8_block_scale_moe_impl(
     )
     moe_inputs = MoeRunnerInputs(
         output=output,
+        do_finalize=do_finalize,
+        finalized_hidden_size=hidden_size,
         routing_logits=routing_logits,
         topk_ids=topk_ids,
         expert_weights=expert_weights,

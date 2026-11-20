@@ -214,6 +214,8 @@ def prims_ts_bf16_moe_op(
     )
     moe_inputs = MoeRunnerInputs(
         output=output,
+        do_finalize=do_finalize,
+        finalized_hidden_size=hidden_size,
         routing_logits=routing_logits,
         topk_ids=topk_ids,
         expert_weights=expert_weights,
