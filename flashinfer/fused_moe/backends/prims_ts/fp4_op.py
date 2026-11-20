@@ -393,7 +393,7 @@ def prims_ts_fp4_block_scale_moe(
         "flashinfer::prims_ts_fp4_block_scale_moe",
         [moe_runner],
         tuning_config,
-        moe_inputs.to_list(),
+        moe_inputs.tuning_inputs(),
         **common_kwargs,
     )
 
@@ -703,7 +703,7 @@ def prims_ts_fp4_block_scale_moe_partitioned(
         "flashinfer::prims_ts_fp4_block_scale_moe_partitioned",
         [runner],
         tuning_config,
-        moe_inputs.to_list(),
+        moe_inputs.tuning_inputs(),
         **common_kwargs,
     )
     intermediate_output = runner.forward(

@@ -277,7 +277,7 @@ def prims_ts_bf16_moe_op(
         ),
         [moe_runner],
         tuning_config,
-        moe_inputs.to_list(),
+        moe_inputs.tuning_inputs(),
         **common_kwargs,
     )
 

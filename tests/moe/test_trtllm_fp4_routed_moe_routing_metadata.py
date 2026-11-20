@@ -285,3 +285,48 @@ def test_routing_metadata_rejects_unsupported_options(experts, case):
             routing_metadata=metadata.slots[0],
             **overrides,
         )
+
+
+@pytest.mark.parametrize("with_metadata", [False, True], ids=["plain", "metadata"])
+def test_deferred_finalize_reuses_finalized_tuned_entry(experts, with_metadata):
+    """do_finalize=False keys on the finalized output shape, so it adds no autotune entry."""
+    from flashinfer import autotune
+    from flashinfer.autotuner import AutoTuner
+
+    quant, view = experts
+    num_tokens = 64
+    hidden_states, scale = _activations(quant, num_tokens, seed=0)
+    routing = _routing(num_tokens, seed=0, packed=True)
+    tuner = AutoTuner.get()
+    tuner.clear_cache()
+
+    def keys():
+        return {
+            k
+            for k in tuner.profiling_cache
+            if k.custom_op == "flashinfer::trtllm_fp4_block_scale_moe"
+        }
+
+    def run(do_finalize):
+        overrides = {}
+        if with_metadata:
+            metadata = _allocate(routing, 8)
+            _populate_on(torch.cuda.Stream(), metadata, routing)
+            overrides["routing_metadata"] = metadata.slots[0]
+        return _call(view, hidden_states, scale, routing, do_finalize, **overrides)
+
+    with autotune(True):
+        run(True)
+    tuned = keys()
+    assert tuned
+
+    with autotune(True):
+        out = run(False)
+    assert keys() == tuned
+    # The kernel still sees the zero-width placeholder, not the keying view.
+    torch.testing.assert_close(
+        _result(num_tokens, out, False),
+        _result(num_tokens, run(True), True).float(),
+        rtol=1e-2,
+        atol=1e-2,
+    )

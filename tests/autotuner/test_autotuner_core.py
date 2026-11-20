@@ -3314,7 +3314,9 @@ def test_moe_deferred_finalize_shares_finalized_cache_key():
             fp8_quantization_type=Fp8QuantizationType.NoneFp8,
             init_packed_topk_ids=moe_topk_ids_init(num_experts),
         )
-        input_shapes = AutoTuner.get()._get_input_sizes(moe_inputs.to_list())
+        input_shapes = AutoTuner.get()._get_input_sizes(moe_inputs.tuning_inputs())
+        # Only the tuning view changes; kernels keep getting the placeholder.
+        assert moe_inputs.to_list()[0].shape == (num_tokens, output_width)
         return AutoTuner._get_cache_key(
             "test::routed_moe", DummyRunner(), input_shapes, tuning_config
         )

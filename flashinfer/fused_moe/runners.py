@@ -648,6 +648,11 @@ class MoERunner(TunableRunner):
         self._support_checked = False
         self._built = False
 
+    def tuning_inputs_for(self, inputs: List[torch.Tensor]) -> List[torch.Tensor]:
+        """Return the list choose_one should key on (the inputs by default)."""
+        tuning_inputs = getattr(inputs, "tuning_inputs", None)
+        return inputs if tuning_inputs is None else tuning_inputs
+
     def tuning_config_for(self, inputs: List[torch.Tensor]) -> TuningConfig:
         """Return the tuning config paired with ``inputs`` when one is present."""
         packed_config = getattr(inputs, "tuning_config", None)
@@ -5504,16 +5509,20 @@ class _TrtllmPackedInputs(list[torch.Tensor]):
         *,
         tuning_config: TuningConfig,
         launch_state: _TrtllmLaunchState,
+        tuning_inputs: Optional[List[torch.Tensor]] = None,
     ) -> None:
         super().__init__(inputs)
         self.tuning_config = tuning_config
         self.launch_state = launch_state
+        # Autotune-lookup view of the inputs; kernels always get the list itself.
+        self.tuning_inputs = tuning_inputs
 
     def with_launch_overrides(self, **kwargs: Any) -> "_TrtllmPackedInputs":
         return _TrtllmPackedInputs(
             list(self),
             tuning_config=self.tuning_config,
             launch_state=self.launch_state.with_overrides(**kwargs),
+            tuning_inputs=self.tuning_inputs,
         )
 
 
@@ -6158,6 +6167,7 @@ class TrtllmFp4RoutedRunner(_TrtllmRunnerBase):
         )
         return _TrtllmPackedInputs(
             moe_inputs.to_list(),
+            tuning_inputs=moe_inputs.tuning_inputs(),
             tuning_config=tuning_config,
             launch_state=_TrtllmLaunchState(static_kwargs),
         )
@@ -6526,6 +6536,7 @@ class TrtllmFp8BlockRunner(_TrtllmRunnerBase):
         )
         return _TrtllmPackedInputs(
             moe_inputs.to_list(),
+            tuning_inputs=moe_inputs.tuning_inputs(),
             tuning_config=tuning_config,
             launch_state=_TrtllmLaunchState(static_kwargs),
         )
@@ -6845,6 +6856,7 @@ class TrtllmFp8PerTensorRunner(_TrtllmRunnerBase):
         )
         return _TrtllmPackedInputs(
             moe_inputs.to_list(),
+            tuning_inputs=moe_inputs.tuning_inputs(),
             tuning_config=tuning_config,
             launch_state=_TrtllmLaunchState(static_kwargs),
         )
@@ -7099,6 +7111,7 @@ class TrtllmBf16RoutedRunner(_TrtllmRunnerBase):
         )
         return _TrtllmPackedInputs(
             moe_inputs.to_list(),
+            tuning_inputs=moe_inputs.tuning_inputs(),
             tuning_config=tuning_config,
             launch_state=_TrtllmLaunchState(static_kwargs),
         )
@@ -8150,6 +8163,7 @@ class PrimsTsRunner(_TrtllmRunnerBase):
         )
         return _TrtllmPackedInputs(
             moe_inputs.to_list(),
+            tuning_inputs=moe_inputs.tuning_inputs(),
             tuning_config=tuning_config,
             launch_state=launch_state,
         )
@@ -8422,6 +8436,7 @@ class TrtllmMxInt4RoutedRunner(_TrtllmRunnerBase):
         )
         return _TrtllmPackedInputs(
             moe_inputs.to_list(),
+            tuning_inputs=moe_inputs.tuning_inputs(),
             tuning_config=tuning_config,
             launch_state=_TrtllmLaunchState(static_kwargs),
         )

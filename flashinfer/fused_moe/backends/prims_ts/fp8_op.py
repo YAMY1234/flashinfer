@@ -475,7 +475,7 @@ def _prims_ts_fp8_per_tensor_scale_moe_impl(
         ),
         [moe_runner],
         tuning_config,
-        moe_inputs.to_list(),
+        moe_inputs.tuning_inputs(),
         **common_kwargs,
     )
 
@@ -1444,7 +1444,7 @@ def _prims_ts_fp8_block_scale_moe_impl(
         ),
         [moe_runner],
         tuning_config,
-        moe_inputs.to_list(),
+        moe_inputs.tuning_inputs(),
         **common_kwargs,
     )
 

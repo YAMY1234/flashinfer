@@ -584,7 +584,7 @@ class MoELayer:
                 custom_op=f"moe_{runner.backend_key}",
                 runners=[runner],
                 tuning_config=runner.tuning_config_for(inputs),
-                inputs=inputs,
+                inputs=runner.tuning_inputs_for(inputs),
                 **launch_kwargs,
             )
             # Still select the best tactic, but no cross-backend measurement

@@ -42,9 +42,7 @@ class MoeRunnerInputs:
     hidden_states_scale: Optional[torch.Tensor]
     gemm1_lora_delta: Optional[torch.Tensor]
     per_token_scale: Optional[torch.Tensor]
-    # Not part of the flat list. With ``do_finalize=False`` the op never writes
-    # ``output``, so ``to_list`` keys it as the finalized ``[num_tokens,
-    # finalized_hidden_size]`` output and shares the entry tuned for ``do_finalize=True``.
+    # Not part of the flat list; used only by tuning_inputs.
     do_finalize: bool = True
     finalized_hidden_size: Optional[int] = None
 
@@ -74,14 +72,22 @@ class MoeRunnerInputs:
     }
 
     def to_list(self) -> List[Optional[torch.Tensor]]:
-        lst = [getattr(self, name) for name in MoeRunnerInputs._FIELDS]
+        return [getattr(self, name) for name in MoeRunnerInputs._FIELDS]
+
+    def tuning_inputs(self) -> List[Optional[torch.Tensor]]:
+        """Inputs for the autotune lookup only; never pass them to a kernel.
+
+        With do_finalize=False the op never writes output, so key it as the
+        finalized [num_tokens, finalized_hidden_size] output and share the entry
+        tuned for do_finalize=True. The view has no storage of its own.
+        """
+        lst = self.to_list()
         out = self.output
         if (
             not self.do_finalize
             and self.finalized_hidden_size is not None
             and out.shape[1] != self.finalized_hidden_size
         ):
-            # Zero-storage view: only its shape reaches the autotune key.
             lst[0] = out.new_empty(()).expand(out.shape[0], self.finalized_hidden_size)
         return lst
 
